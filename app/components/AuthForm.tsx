@@ -7,14 +7,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation";
 import Image from "next/image"
 import { toast } from "sonner"
-
+import { auth } from "@/app/firebase/client";
 import { Button } from "@/components/ui/button"
 import { Form } from "@/components/ui/form"
 import FormField from "./FormField"
+import {createUserWithEmailAndPassword ,signInWithEmailAndPassword } from "@firebase/auth"
+import { signIn, signUp } from "@/lib/actions/auth.action";
+
 
 type FormType = "sign-in" | "sign-up"
 
-const authFormSchema = (type: FormType) => {
+const authFormSchema = (type : FormType) => {
   return z.object({
     name: type === "sign-up" ? z.string().min(3) : z.string().optional(),
     email: z.string().email(),
@@ -35,13 +38,47 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       if (type === "sign-up") {
-         toast.success("Account created successfully")
-         router.push("/sign-in")
-        console.log("sign up", values)
+         const { name, email, password } = values;
+
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const result = await signUp({
+          uid: userCredential.user.uid,
+          name: name!,
+          email,
+          password,
+        });
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success("Account created successfully. Please sign in.");
+        router.push("/sign-in");
       } else {
+      const {email,password} = values;
+      const userCredentials = await signInWithEmailAndPassword(auth,email,password)
+
+
+      const idToken = await userCredentials.user.getIdToken();
+
+      if(!idToken){
+        toast.error('sign in failed');
+        return
+      }
+
+      await signIn({
+        email,
+        idToken
+      })
             toast.success("Logged in successfully")
         router.push("/")
       }
