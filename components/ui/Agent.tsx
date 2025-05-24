@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-import { buttonVariants } from './button';
+
 import { cn } from '@/lib/utils'; // or wherever your utility is defined
 
 enum CallStatus{
